@@ -28,6 +28,7 @@ class TestContract(AbstractTestContracts):
         # Create dutch auction with ceiling of 2 billion and price factor of 200,000
         self.dutch_auction = self.create_contract('DutchAuction/DutchAuction.sol',
                                                     params=(self.multisig_wallet.address, 62500 * 10 ** 18, 78125000000000000))
+        self.s.mine()
         # Create crowdsale controller
         self.crowdsale_controller = self.create_contract('CrowdsaleController/CrowdsaleController.sol', 
                                                         params=(self.multisig_wallet.address, self.dutch_auction, 2500000000000000))

@@ -2,7 +2,6 @@ pragma solidity 0.4.15;
 import 'Wallets/MultiSigWallet.sol';
 import 'Presale/Presale.sol';
 import 'DutchAuction/AbstractDutchAuction.sol';
-import 'Tokens/OmegaToken.sol';
 import 'OpenWindow/OpenWindow.sol';
 
 /// @title Crowdsale controller token contract
@@ -19,7 +18,9 @@ contract CrowdsaleController {
      *  Constants
      */
     uint256 constant public WAITING_PERIOD = 7 days;
-    uint256 constant public MAIN_SALE_VALUE_CAP = 250000000;
+    uint256 constant public MIN_PRESALE_TOKENS = 2000000;
+    uint256 constant public DUTCH_AUCTION_USD_VALUE_CAP = 25000000;
+    uint256 constant public PRESALE_USD_VALUE_CAP = 5000000;
 
     /*
      *  Storage
@@ -34,7 +35,6 @@ contract CrowdsaleController {
     uint256 public endTime;
     uint256 public presaleTokenSupply;
     uint256 public exchangeRateInWei; // 1 usd to wei
-    address receiver;
 
     enum Stages {
         Deployed,
@@ -80,15 +80,12 @@ contract CrowdsaleController {
         _;
     }
 
-    /// @dev Fallback function, captures the refund when dutch auction and open window sales end and sends it to the receiver
+    /// @dev Fallback function, captures the 
     function ()
         payable
     {   
-        if (stage == Stages.MainSale) {
+        if (stage == Stages.MainSale || stage == Stages.OpenWindow) {
             fillOrMarket(msg.sender);
-        } else if (stage == Stages.SaleEnded) {
-            // Use transfer so that it doesn't throw an error when the msg has no value
-            receiver.transfer(msg.value);
         } else {
             revert();
         }
@@ -146,7 +143,7 @@ contract CrowdsaleController {
         // If a bid is done on behalf of a user via ShapeShift, the receiver address is set
         if (_receiver == 0x0)
             _receiver = msg.sender;
-        receiver = _receiver;
+        address receiver = _receiver;
         uint256 amount = msg.value;
         if (stage == Stages.MainSale) {
             dutchAuction.bid.value(amount)(receiver);
@@ -170,7 +167,7 @@ contract CrowdsaleController {
     {   
         if (_receiver == 0x0)
             _receiver = msg.sender;
-        receiver = _receiver;
+        address receiver = _receiver;
         // Checks if the receiver has any tokens in each contract and if they do claims their tokens
         if (dutchAuction.bids(receiver) > 0)
             dutchAuction.claimTokens(receiver);
@@ -190,7 +187,7 @@ contract CrowdsaleController {
         isDutchAuction
     {  
         // Add in tokens already allocated for the presale
-        tokensLeft = tokensLeft.add(6300000 * 10 ** 18);
+        tokensLeft = tokensLeft.add(omegaToken.CROWDSALE_CONTROLLER_ALLOCATION());
         presaleTokenSupply = calcPresaleTokenSupply();
         // Add premuim to price
         price = price.mul(13).div(10);
@@ -221,7 +218,10 @@ contract CrowdsaleController {
         // uint256 reverseDutchValuation = 25000000*10**36/omegaToken.balanceOf(dutchAuction)
         // uint256 reverseDutchValuationWithPresaleDiscount = (reverseDutchValuation * 3) / 4;
         // uint256 presaleCap = 5000000; // 5 million USD
-      return max256(2000000*10**18, 5000000*10**36/(25000000*10**36/omegaToken.balanceOf(dutchAuction)).mul(3).div(4));
+        uint256 dutchAuctionTokenSupply = omegaToken.balanceOf(address(dutchAuction));
+        if (dutchAuctionTokenSupply == 0)
+            dutchAuctionTokenSupply = 1;
+        return max256(MIN_PRESALE_TOKENS*10**omegaToken.DECIMALS(), PRESALE_USD_VALUE_CAP*10**36/(DUTCH_AUCTION_USD_VALUE_CAP*10**36/dutchAuctionTokenSupply).mul(3).div(4));
     }
 
     /*
@@ -234,6 +234,7 @@ contract CrowdsaleController {
         setupPresaleClaim();
         stage = Stages.SaleEnded;
         endTime = now;
+        omegaToken.transfer(wallet, omegaToken.balanceOf(address(this)));
         FinalizeSale(endTime);
     }
 
