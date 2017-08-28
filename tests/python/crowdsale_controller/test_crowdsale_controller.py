@@ -5,6 +5,8 @@ class TestContract(AbstractTestContracts):
     run test with python -m unittest tests.python.crowdsale_controller.test_crowdsale_controller
     """
 
+    BLOCKS_PER_DAY = 6000
+    AUCTION_DURATION_IN_BLOCKS = 30000
     TOTAL_TOKENS = int(100000000 * 10**18)
     WAITING_PERIOD = 60*60*24*7
     FUNDING_GOAL = 62500 * 10**18 # 62,500 Ether ~ 25 million dollars
@@ -27,7 +29,7 @@ class TestContract(AbstractTestContracts):
         self.s.mine()
         # Create dutch auction with ceiling of 2 billion and price factor of 200,000
         self.dutch_auction = self.create_contract('DutchAuction/DutchAuction.sol',
-                                                    params=(self.multisig_wallet.address, 62500 * 10 ** 18, 78125000000000000))
+                                                    params=(self.multisig_wallet.address, 62500 * 10 ** 18, 78125000000000000, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
         self.s.mine()
         # Create crowdsale controller
         self.crowdsale_controller = self.create_contract('CrowdsaleController/CrowdsaleController.sol', 
