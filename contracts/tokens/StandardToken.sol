@@ -56,7 +56,6 @@ contract StandardToken is Token {
         public
         returns (bool)
     {
-        require((value != 0) && (allowances[msg.sender][_spender] != 0));
         allowances[msg.sender][_spender] = value;
         Approval(msg.sender, _spender, value);
         return true;
