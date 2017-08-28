@@ -47,21 +47,10 @@ class AbstractTestContracts(TestCase):
         path, extra_args = self.get_dirs(path)
         if params:
             params = [x.address if isinstance(x, ABIContract) else x for x in params]
-        if libraries:
-            for name, address in libraries.items():
-                if type(address) == str:
-                    if self.is_hex(address):
-                        libraries[name] = address
-                    else:
-                        libraries[name] = ContractTranslator.encode_function_call(address, 'hex')
-                elif isinstance(address, ABIContract):
-                    libraries[name] = ContractTranslator.encode_function_call(address.address, 'hex')
-                else:
-                    raise ValueError
         compiler = t.languages['solidity']
-        combined = _solidity.compile_file(path, libraries=libraries, combined='bin,abi', optimize=True, extra_args=extra_args)
+        combined = _solidity.compile_file(path, combined='bin,abi', optimize=True, extra_args=extra_args)
         abi = combined[contract_name]['abi']
         ct = ContractTranslator(abi)
         code = combined[contract_name]['bin'] + (ct.encode_constructor_arguments(params) if params else b'')
-        address = self.s.tx(sender=keys[sender if sender else 0], to=b'', value=0, data=code)
+        address = self.s.tx(sender=keys[sender if sender else 0], to=b'', value=0, startgas=4700000, data=code)
         return ABIContract(self.s, abi, address)
