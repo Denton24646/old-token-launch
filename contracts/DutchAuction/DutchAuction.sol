@@ -1,5 +1,5 @@
 pragma solidity 0.4.15;
-import "Tokens/AbstractToken.sol";
+import "Tokens/OmegaToken.sol";
 import "CrowdsaleController/AbstractCrowdsaleController.sol";
 import "Math/SafeMath.sol";
 
@@ -16,12 +16,12 @@ contract DutchAuction {
     /*
      *  Constants
      */
-    uint256 constant public MAX_TOKENS_SOLD = 23700000 * 10**18; // 23.7 M
+    uint256 constant public RATE_OF_DECREASE_PER_DAY = 15097573839662448;
 
     /*
      *  Storage
      */
-    Token public omegaToken;
+    OmegaToken public omegaToken;
     CrowdsaleController public crowdsaleController;
     address public wallet;
     address public owner;
@@ -44,7 +44,6 @@ contract DutchAuction {
      *  Modifiers
      */
     modifier atStage(Stages _stage) {
-        // Contract not in expected state
         require(stage == _stage);
         _;
     }
@@ -87,7 +86,7 @@ contract DutchAuction {
     /// @param _wallet Omega wallet
     /// @param _ceiling Auction ceiling
     /// @param _priceFactor Auction price factor
-    function DutchAuction(address _wallet, uint256 _ceiling, uint256 _priceFactor)
+    function DutchAuction(address _wallet, uint256 _ceiling, uint256 _priceFactor, uint256 _blocksPerDay, uint256_durationInBlocks)
         public
     {
         // Check for null arguments
@@ -102,7 +101,7 @@ contract DutchAuction {
     /// @dev Setup function sets external contracts' addresses
     /// @param _omegaToken Omega token initialized in crowdsale controller
     /// @param _crowdsaleController Crowdsaler controller
-    function setup(Token _omegaToken, CrowdsaleController _crowdsaleController)
+    function setup(OmegaToken _omegaToken, CrowdsaleController _crowdsaleController)
         public
         isOwner
         atStage(Stages.AuctionDeployed)
@@ -112,7 +111,7 @@ contract DutchAuction {
         omegaToken = _omegaToken;
         crowdsaleController = _crowdsaleController;
         // Validate token balance
-        require(omegaToken.balanceOf(this) >= MAX_TOKENS_SOLD);
+        require(omegaToken.balanceOf(this) >= omegaToken.DUTCH_AUCTION_ALLOCATION());
         stage = Stages.AuctionSetUp;
     }
 
@@ -137,6 +136,9 @@ contract DutchAuction {
         atStage(Stages.AuctionSetUp)
     {
         require(_ceiling > 0 && _priceFactor > 0);
+        uint numberBlocks = block.number - startBlock; 
+        if (numberBlocks > 30000)
+            numberBlocks = 30000;
         ceiling = _ceiling;
         priceFactor = _priceFactor;
     }
@@ -145,7 +147,6 @@ contract DutchAuction {
     /// @return Returns token price
     function calcCurrentTokenPrice()
         public
-        constant
         timedTransitions
         returns (uint256)
     {
@@ -158,7 +159,6 @@ contract DutchAuction {
     /// @return Returns current auction stage
     function updateStage()
         public
-        constant
         timedTransitions
         returns (Stages)
     {
@@ -181,7 +181,7 @@ contract DutchAuction {
         amount = msg.value;
         require(amount > 0);
         // Prevent that more than 90% of tokens are sold. Only relevant if cap not reached
-        uint maxWei = MAX_TOKENS_SOLD * calcTokenPrice() / 10**18 - totalReceived;
+        uint maxWei = omegaToken.DUTCH_AUCTION_ALLOCATION() * calcTokenPrice() / 10**omegaToken.DECIMALS() - totalReceived;
         uint maxWeiBasedOnTotalReceived = ceiling - totalReceived;
         if (maxWeiBasedOnTotalReceived < maxWei)
             maxWei = maxWeiBasedOnTotalReceived;
@@ -191,7 +191,7 @@ contract DutchAuction {
         // Forward funding to ether wallet
         wallet.transfer(amount);
         bids[receiver] = bids[receiver].add(amount);
-        totalReceived  = totalReceived.add(amount);
+        totalReceived = totalReceived.add(amount);
         if (amount == maxWei) {
             // When maxWei is equal to the big amount the auction is ended and finalizeSale is triggered
             finalizeSale();
@@ -207,7 +207,7 @@ contract DutchAuction {
         public
         isCrowdsaleController
     {
-        uint256 tokenCount = (bids[receiver] * 10**18).div(finalPrice);
+        uint256 tokenCount = (bids[receiver] * 10**omegaToken.DECIMALS()).div(finalPrice);
         bids[receiver] = 0;
         omegaToken.transfer(receiver, tokenCount);
     }
@@ -221,9 +221,9 @@ contract DutchAuction {
     {
         // Blocks after 5 days
         // uint256 block_diff = 30000;
-        // uint256 rate_of_decrease = 15097573839662448 * block_diff / 6000;
+        // uint256 rate_of_decrease = RATE_OF_DECREASE_PER_DAY * block_diff / 6000;
         // return priceFactor - rate_of_decrease; 
-        return priceFactor.sub(15097573839662448 * 30000 / 6000);
+        return priceFactor.sub(RATE_OF_DECREASE_PER_DAY * 30000 / 6000);
     }
 
     /// @dev Calculates token price
@@ -236,9 +236,12 @@ contract DutchAuction {
         // Calculated at 6,000 blocks mined per day
         // Auction calculated to stop after 5 days
         // uint256 block_diff = block.number - startBlock;
-        // uint256 rate_of_decrease = 15097573839662448 * block_diff / 6000;
+        // uint256 rate_of_decrease = RATE_OF_DECREASE_PER_DAY * block_diff / 6000;
         // return priceFactor - rate_of_decrease;
-        return priceFactor.sub((15097573839662448 * (block.number.sub(startBlock))).div(6000));
+        uint numberBlocks = block.number - startBlock; 
+        if (numberBlocks > 30000)
+            numberBlocks = 30000;
+        return priceFactor.sub((RATE_OF_DECREASE_PER_DAY * (block.number.sub(startBlock))).div(6000));
     }
 
     /*
@@ -250,7 +253,7 @@ contract DutchAuction {
     {
         stage = Stages.AuctionEnded;
         finalPrice = calcTokenPrice();
-        uint256 tokensLeft = MAX_TOKENS_SOLD.sub((totalReceived * 10**18).div(finalPrice));
+        uint256 tokensLeft = omegaToken.DUTCH_AUCTION_ALLOCATION().sub((totalReceived * 10**omegaToken.DECIMALS()).div(finalPrice));
         // Auction contract transfers all unsold tokens to the crowdsale controller
         omegaToken.transfer(address(crowdsaleController), tokensLeft);
         if (totalReceived == ceiling)
