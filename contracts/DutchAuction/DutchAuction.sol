@@ -28,6 +28,8 @@ contract DutchAuction {
     uint256 public ceiling;
     uint256 public priceFactor;
     uint256 public startBlock;
+    uint256 public blocksPerDay;
+    uint256 public auctionDurationInBlocks;
     uint256 public totalReceived = 0;
     uint256 public finalPrice;
     mapping (address => uint) public bids;
@@ -86,15 +88,17 @@ contract DutchAuction {
     /// @param _wallet Omega wallet
     /// @param _ceiling Auction ceiling
     /// @param _priceFactor Auction price factor
-    function DutchAuction(address _wallet, uint256 _ceiling, uint256 _priceFactor)
+    function DutchAuction(address _wallet, uint256 _ceiling, uint256 _priceFactor, uint256 _blocksPerDay, uint256 _auctionDurationInBlocks)
         public
     {
         // Check for null arguments
-        require(_wallet != 0x0 && _ceiling != 0 && _priceFactor != 0);
+        require(_wallet != 0x0 && _ceiling != 0 && _priceFactor != 0 && _blocksPerDay != 0 && _auctionDurationInBlocks != 0);
         owner = msg.sender;
         wallet = _wallet;
         ceiling = _ceiling;
         priceFactor = _priceFactor;
+        blocksPerDay = _blocksPerDay;
+        auctionDurationInBlocks = _auctionDurationInBlocks;
         stage = Stages.AuctionDeployed;
     }
 
@@ -136,9 +140,6 @@ contract DutchAuction {
         atStage(Stages.AuctionSetUp)
     {
         require(_ceiling > 0 && _priceFactor > 0);
-        uint numberBlocks = block.number - startBlock; 
-        if (numberBlocks > 30000)
-            numberBlocks = 30000;
         ceiling = _ceiling;
         priceFactor = _priceFactor;
     }
@@ -220,10 +221,9 @@ contract DutchAuction {
         returns (uint256)
     {
         // Blocks after 5 days
-        // uint256 block_diff = 30000;
-        // uint256 rate_of_decrease = RATE_OF_DECREASE_PER_DAY * block_diff / 6000;
+        // uint256 rate_of_decrease = RATE_OF_DECREASE_PER_DAY * auctionDurationInBlocks / blocksPerDay;
         // return priceFactor - rate_of_decrease; 
-        return priceFactor.sub(RATE_OF_DECREASE_PER_DAY * 30000 / 6000);
+        return priceFactor.sub(RATE_OF_DECREASE_PER_DAY * auctionDurationInBlocks / blocksPerDay);
     }
 
     /// @dev Calculates token price
@@ -236,12 +236,12 @@ contract DutchAuction {
         // Calculated at 6,000 blocks mined per day
         // Auction calculated to stop after 5 days
         // uint256 block_diff = block.number - startBlock;
-        // uint256 rate_of_decrease = RATE_OF_DECREASE_PER_DAY * block_diff / 6000;
+        // uint256 rate_of_decrease = RATE_OF_DECREASE_PER_DAY * block_diff / blocksPerDay;
         // return priceFactor - rate_of_decrease;
-        uint numberBlocks = block.number - startBlock; 
-        if (numberBlocks > 30000)
-            numberBlocks = 30000;
-        return priceFactor.sub((RATE_OF_DECREASE_PER_DAY * (block.number.sub(startBlock))).div(6000));
+        uint256 numberOfBlocks = block.number - startBlock; 
+        if (numberOfBlocks > auctionDurationInBlocks)
+            numberOfBlocks = auctionDurationInBlocks - 1;
+        return priceFactor.sub(RATE_OF_DECREASE_PER_DAY * (numberOfBlocks).div(blocksPerDay));
     }
 
     /*
