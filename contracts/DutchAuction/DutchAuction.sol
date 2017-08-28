@@ -25,11 +25,10 @@ contract DutchAuction {
     address public wallet;
     address public owner;
     uint256 public ceiling;
-    uint256 public priceFactor;
+    uint256 public startPrice;
     uint256 public startBlock;
     uint256 public blocksPerDay;
     uint256 public auctionDurationInBlocks;
-    uint256 public rateOfDecreasePerDay;
     uint256 public totalReceived = 0;
     uint256 public finalPrice;
     uint256 public finalPriceMin;
@@ -67,6 +66,12 @@ contract DutchAuction {
         _;
     }
 
+    modifier areValidPrices(uint256 _startPrice, uint256 _finalPriceMin) {
+        require(_startPrice.sub(_finalPriceMin).div(auctionDurationInBlocks.div(blocksPerDay)) > 0);
+        require(omegaToken.DUTCH_AUCTION_ALLOCATION() >= totalReceived * 10**omegaToken.DECIMALS().div(_finalPriceMin));
+        _;
+    }
+
     modifier isValidPayload(address receiver) {
          // Payload length has to have correct length and receiver should not be dutch auction or omega token contract
         require((msg.data.length == 4 || msg.data.length == 36)
@@ -77,7 +82,7 @@ contract DutchAuction {
 
     modifier timedTransitions() {
         // Ends the sale after the stop price has been reached
-        if (stage == Stages.AuctionStarted && calcTokenPrice() <= calcStopPrice())
+        if (stage == Stages.AuctionStarted && (block.number - startBlock) >= auctionDurationInBlocks)
             finalizeSale();
         _;
     }
@@ -88,21 +93,27 @@ contract DutchAuction {
     /// @dev Contract constructor function sets owner
     /// @param _wallet Omega wallet
     /// @param _ceiling Auction ceiling
-    /// @param _priceFactor Auction price factor
-    function DutchAuction(address _wallet, uint256 _ceiling, uint256 _priceFactor, uint256 _blocksPerDay, uint256 _auctionDurationInBlocks, uint256 _finalPriceMin)
+    /// @param _startPrice Auction price factor
+    function DutchAuction(address _wallet,
+                          uint256 _ceiling,
+                          uint256 _startPrice,
+                          uint256 _finalPriceMin,
+                          uint256 _blocksPerDay,
+                          uint256 _auctionDurationInBlocks)
         public
     {
         // Check for null arguments
-        require(_wallet != 0x0 && _ceiling != 0 && _priceFactor != 0 && _blocksPerDay != 0 && _auctionDurationInBlocks != 0 && _finalPriceMin != 0);
+        require(_wallet != 0x0 && _ceiling != 0 && _startPrice != 0 && _blocksPerDay != 0 && _auctionDurationInBlocks != 0 && _finalPriceMin != 0);
         owner = msg.sender;
         wallet = _wallet;
         ceiling = _ceiling;
-        priceFactor = _priceFactor;
+        startPrice = _startPrice;
         blocksPerDay = _blocksPerDay;
         auctionDurationInBlocks = _auctionDurationInBlocks;
         finalPriceMin = _finalPriceMin;
-        rateOfDecreasePerDay = priceFactor.sub(finalPriceMin).div(auctionDurationInBlocks.div(blocksPerDay));
         stage = Stages.AuctionDeployed;
+        // require(_startPrice.sub(_finalPriceMin).div(auctionDurationInBlocks.div(blocksPerDay)) > 0);
+        require(omegaToken.DUTCH_AUCTION_ALLOCATION() >= totalReceived * 10**omegaToken.DECIMALS().div(_finalPriceMin));
     }
 
     /// @dev Setup function sets external contracts' addresses
@@ -136,15 +147,17 @@ contract DutchAuction {
 
     /// @dev Changes auction ceiling and start price factor before auction is started
     /// @param _ceiling Updated auction ceiling
-    /// @param _priceFactor Updated start price factor
-    function changeSettings(uint256 _ceiling, uint256 _priceFactor)
+    /// @param _startPrice Updated start price factor
+    function changeSettings(uint256 _ceiling, uint256 _startPrice, uint256 _finalPriceMin)
         public
         isWallet
         atStage(Stages.AuctionSetUp)
+        areValidPrices(_startPrice, _finalPriceMin)
     {
-        require(_ceiling > 0 && _priceFactor > 0);
+        require(_ceiling > 0);
         ceiling = _ceiling;
-        priceFactor = _priceFactor;
+        startPrice = _startPrice;
+        finalPriceMin = _finalPriceMin;
     }
 
     /// @dev Calculates current token price
@@ -210,23 +223,11 @@ contract DutchAuction {
     function claimTokens(address receiver)
         public
         isCrowdsaleController
+        atStage(Stages.AuctionEnded)
     {
         uint256 tokenCount = (bids[receiver] * 10**omegaToken.DECIMALS()).div(finalPrice);
         bids[receiver] = 0;
         omegaToken.transfer(receiver, tokenCount);
-    }
-
-    /// @dev Calculates stop price
-    /// @return Returns stop price
-    function calcStopPrice()
-        constant
-        public
-        returns (uint256)
-    {
-        // Blocks after 5 days
-        // uint256 rate_of_decrease = rateOfDecreasePerDay * auctionDurationInBlocks / blocksPerDay;
-        // return priceFactor - rate_of_decrease; 
-        return priceFactor.sub(rateOfDecreasePerDay * auctionDurationInBlocks / blocksPerDay);
     }
 
     /// @dev Calculates token price
@@ -236,15 +237,15 @@ contract DutchAuction {
         public
         returns (uint)
     {   
-        // Calculated at 6,000 blocks mined per day
         // Auction calculated to stop after 5 days
         // uint256 block_diff = block.number - startBlock;
-        // uint256 rate_of_decrease = rateOfDecreasePerDay * block_diff / blocksPerDay;
-        // return priceFactor - rate_of_decrease;
+        // uint256 rateOfDecreasePerDay = (startPrice - finalPriceMin) / (auctionDurationInBlocks / blocksPerDay))
+        // uint256 rateOfDecrease = rateOfDecreasePerDay * block_diff / blocksPerDay;
+        // return startPrice - rate_of_decrease;
         uint256 numberOfBlocks = block.number.sub(startBlock); 
         if (numberOfBlocks > auctionDurationInBlocks)
             numberOfBlocks = auctionDurationInBlocks - 1;
-        return priceFactor.sub(rateOfDecreasePerDay.mul(numberOfBlocks).div(blocksPerDay));
+        return startPrice.sub(startPrice.sub(finalPriceMin).div(auctionDurationInBlocks.div(blocksPerDay)).mul(numberOfBlocks).div(blocksPerDay));
     }
 
     /*

@@ -24,6 +24,7 @@ class TestContract(AbstractTestContracts):
         # Create Omega token
         self.omega_token= self.create_contract('Tokens/OmegaToken.sol',
                                                   params=(dutch_auction_address, self.multisig_wallet.address))
+        self.s.mine()
         # Create presale
         self.presale= self.create_contract('Presale/Presale.sol',
                                                   params=())

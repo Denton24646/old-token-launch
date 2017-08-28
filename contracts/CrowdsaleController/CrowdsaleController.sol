@@ -18,9 +18,6 @@ contract CrowdsaleController {
      *  Constants
      */
     uint256 constant public WAITING_PERIOD = 7 days;
-    uint256 constant public MIN_PRESALE_TOKENS = 2000000;
-    uint256 constant public DUTCH_AUCTION_USD_VALUE_CAP = 25000000;
-    uint256 constant public PRESALE_USD_VALUE_CAP = 5000000;
 
     /*
      *  Storage
@@ -34,7 +31,9 @@ contract CrowdsaleController {
     Stages public stage;
     uint256 public endTime;
     uint256 public presaleTokenSupply;
-    uint256 public exchangeRateInWei; // 1 usd to wei
+    uint256 public minPresaleTokens;
+    uint256 public dutchAuctionUsdValueCap;
+    uint256 public presaleUsdValueCap;
 
     enum Stages {
         Deployed,
@@ -93,17 +92,18 @@ contract CrowdsaleController {
 
     /// @param _dutchAuction Reverse dutch auction contract
     /// @param _wallet Omega multisig wallet
-    /// @param _exchangeRateInWei Wei equivalent of 1 usd
-    function CrowdsaleController(address _wallet, DutchAuction _dutchAuction, uint256 _exchangeRateInWei) 
+    function CrowdsaleController(address _wallet, DutchAuction _dutchAuction, uint256 _minPresaleTokens, uint256 _dutchAuctionUsdValueCap, uint256 _presaleUsdValueCap) 
         public
     {
         // Initialize gateway to both contracts
         // Check for null arguments
-        require(_wallet != 0x0 && address(_dutchAuction) != 0x0 && _exchangeRateInWei != 0);
+        require(_wallet != 0x0 && address(_dutchAuction) != 0x0);
         owner = msg.sender;
         wallet = _wallet;
         dutchAuction = _dutchAuction;
-        exchangeRateInWei = _exchangeRateInWei;
+        minPresaleTokens = _minPresaleTokens;
+        dutchAuctionUsdValueCap = _dutchAuctionUsdValueCap;
+        presaleUsdValueCap = _presaleUsdValueCap;
         presale = new Presale();
         omegaToken = new OmegaToken(address(dutchAuction), wallet);
         stage = Stages.Deployed;
@@ -220,8 +220,8 @@ contract CrowdsaleController {
         // uint256 presaleCap = 5000000; // 5 million USD
         uint256 dutchAuctionTokenSupply = omegaToken.balanceOf(address(dutchAuction));
         if (dutchAuctionTokenSupply == 0)
-            dutchAuctionTokenSupply = 1;
-        return max256(MIN_PRESALE_TOKENS*10**omegaToken.DECIMALS(), PRESALE_USD_VALUE_CAP*10**36/(DUTCH_AUCTION_USD_VALUE_CAP*10**36/dutchAuctionTokenSupply).mul(3).div(4));
+            return minPresaleTokens*10**omegaToken.DECIMALS();
+        return max256(minPresaleTokens*10**omegaToken.DECIMALS(), presaleUsdValueCap*10**36/(dutchAuctionUsdValueCap*10**36/dutchAuctionTokenSupply).mul(3).div(4));
     }
 
     /*

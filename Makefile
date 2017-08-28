@@ -19,9 +19,3 @@ clean-pyc:
 
 test: clean-pyc
 	python -m unittest discover tests.python
-
-abi:
-	python deploy/ethabi.py
-
-deploy:
-	python deploy/ethdeploy.py --f deploy/tokenSale.json

@@ -1,5 +1,5 @@
 pragma solidity 0.4.15;
-import "Tokens/AbstractToken.sol";
+import "Tokens/OmegaToken.sol";
 import "Math/SafeMath.sol";
 
 /// @title Open window contract
@@ -21,7 +21,7 @@ contract OpenWindow {
      */
     address public wallet;
     address public crowdsaleController;
-    Token public omegaToken;
+    OmegaToken public omegaToken;
     uint256 public price;
     uint256 public startTime;
     uint256 public tokenSupply;
@@ -57,7 +57,7 @@ contract OpenWindow {
     /// @param _price Price of the token in Wei (OMT/Wei pair price)
     /// @param _wallet The sale's beneficiary address 
     /// @param _omegaToken Omega token
-    function setupSale(uint256 _tokenSupply, uint256 _price, address _wallet, Token _omegaToken) 
+    function setupSale(uint256 _tokenSupply, uint256 _price, address _wallet, OmegaToken _omegaToken) 
         public
         isCrowdsaleController
     {
@@ -80,14 +80,14 @@ contract OpenWindow {
         // Check that msg.value is not 0
         uint256 amount = msg.value;
         require(amount != 0);
-        uint256 maxWei = tokenSupply.mul(price) / 10**18;
+        uint256 maxWei = tokenSupply.mul(price) / 10**omegaToken.DECIMALS();
         //Cannot purchase more tokens than this contract has available to sell
         if (amount > maxWei) {
             amount = maxWei;
             // Send change back to receiver address. In case of a ShapeShift bid the user receives the change back directly
             receiver.transfer(msg.value.sub(amount));
         }
-        uint256 tokenPurchase = (amount * 10 ** 18).div(price);
+        uint256 tokenPurchase = (amount * 10**omegaToken.DECIMALS()).div(price);
         // Forward received ether to the wallet
         wallet.transfer(amount);
         // Transfer the sum of tokens tokenPurchase to the msg.sender

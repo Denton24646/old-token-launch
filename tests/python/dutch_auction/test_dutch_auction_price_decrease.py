@@ -6,11 +6,12 @@ class TestContract(AbstractTestContracts):
     """
 
     BLOCKS_PER_DAY = 6000
+    AUCTION_DURATION_IN_BLOCKS = 30000
     TOTAL_TOKENS = 100000000 * 10**18 # 100 million
     MAX_TOKENS_SOLD = 23700000 # 30 million
     WAITING_PERIOD = 60*60*24*7 
     FUNDING_GOAL = 62500 * 10**18 # 62,500 Ether ~ 25 million dollars
-    PRICE_FACTOR = 78125000000000000
+    START_PRICE = 78125000000000000
     MAX_GAS = 150000  # Kraken gas limit
 
     def __init__(self, *args, **kwargs):
@@ -29,8 +30,9 @@ class TestContract(AbstractTestContracts):
         self.s.mine()
         # Create dutch auction with ceiling of 62.5k Ether and price factor of 78125000000000000 (start price in wei per token for duch)
         self.dutch_auction = self.create_contract('DutchAuction/DutchAuction.sol',
-                                                  params=(self.multisig_wallet.address, 62500 * 10**18,  78125000000000000))
-        # Create Omega token
+                                                  params=(self.multisig_wallet.address, 62500 * 10**18,  78125000000000000, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
+        self.s.mine()
+        # Create crowdsale controller to get Omega token
         self.crowdsale_controller = self.create_contract('CrowdsaleController/CrowdsaleController.sol', 
                                                         params=(self.multisig_wallet.address, self.dutch_auction, 2500000000000000))
         self.s.mine()

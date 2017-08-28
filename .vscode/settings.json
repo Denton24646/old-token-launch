@@ -1,0 +1,6 @@
+{
+  "git.ignoreLimitWarning": true,
+  "editor.tabSize": 2,
+"editor.detectIndentation": false,
+"python.linting.pylintEnabled": false
+}

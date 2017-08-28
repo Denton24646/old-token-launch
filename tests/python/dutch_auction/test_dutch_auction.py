@@ -6,11 +6,16 @@ class TestContract(AbstractTestContracts):
     """
 
     BLOCKS_PER_DAY = 6000
+    AUCTION_DURATION_IN_BLOCKS = 30000
+    FINAL_PRICE_MIN = 2637130801687760
+    MIN_PRESALE_TOKENS = 2000000;
+    DUTCH_AUCTION_USD_VALUE_CAP = 25000000;
+    PRESALE_USD_VALUE_CAP = 5000000;
     TOTAL_TOKENS = 100000000 * 10**18 # 100 million
     MAX_TOKENS_SOLD = 23700000 # 30 million
     WAITING_PERIOD = 60*60*24*7 
     FUNDING_GOAL = 62500 * 10**18 # 62,500 Ether ~ 25 million dollars
-    PRICE_FACTOR = 78125000000000000
+    START_PRICE = 78125000000000000
     MAX_GAS = 150000  # Kraken gas limit
 
     def __init__(self, *args, **kwargs):
@@ -27,12 +32,13 @@ class TestContract(AbstractTestContracts):
         self.multisig_wallet = self.create_contract('Wallets/MultiSigWallet.sol',
                                                     params=constructor_parameters)
         self.s.mine()
-        # Create dutch auction with ceiling of 2 billion and price factor of 200,000
+        # Create dutch auction
         self.dutch_auction = self.create_contract('DutchAuction/DutchAuction.sol',
-                                                  params=(self.multisig_wallet.address, 2000 * 10 ** 18, 200000))
+                                                  params=(self.multisig_wallet.address, self.FUNDING_GOAL+1 , self.START_PRICE+1, self.FINAL_PRICE_MIN+1, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
+        self.s.mine()
         # Create crowdsale controller
         self.crowdsale_controller = self.create_contract('CrowdsaleController/CrowdsaleController.sol', 
-                                                        params=(self.multisig_wallet.address, self.dutch_auction, 2500000000000000))
+                                                        params=(self.multisig_wallet.address, self.dutch_auction, self.MIN_PRESALE_TOKENS, self.DUTCH_AUCTION_USD_VALUE_CAP, self.PRESALE_USD_VALUE_CAP))
         self.s.mine()
         # Get the omega token contract that the crowdsale controller deployed
         omega_token_address = self.crowdsale_controller.omegaToken()
@@ -40,14 +46,16 @@ class TestContract(AbstractTestContracts):
         self.omega_token = self.contract_at(omega_token_address, omega_token_abi)
         # Setup dutch auction
         self.dutch_auction.setup(self.omega_token.address, self.crowdsale_controller.address)
-        self.assertEqual(self.dutch_auction.ceiling(), 2000 * 10 ** 18)
-        self.assertEqual(self.dutch_auction.priceFactor(), 200000)
-        # Change funding goal to 1 billion and 240,000
+        self.assertEqual(self.dutch_auction.ceiling(), self.FUNDING_GOAL + 1)
+        self.assertEqual(self.dutch_auction.startPrice(), self.START_PRICE + 1)
+        self.assertEqual(self.dutch_auction.finalPriceMin(), self.FINAL_PRICE_MIN +1)
+        # Change funding goal 
         change_ceiling_data = self.dutch_auction.translator.encode('changeSettings',
-                                                                   [self.FUNDING_GOAL, self.PRICE_FACTOR])
+                                                                   [self.FUNDING_GOAL, self.START_PRICE, self.FINAL_PRICE_MIN])
         self.multisig_wallet.submitTransaction(self.dutch_auction.address, 0, change_ceiling_data, sender=keys[wa_1])
         self.assertEqual(self.dutch_auction.ceiling(), self.FUNDING_GOAL)
-        self.assertEqual(self.dutch_auction.priceFactor(), self.PRICE_FACTOR)
+        self.assertEqual(self.dutch_auction.startPrice(), self.START_PRICE)
+        self.assertEqual(self.dutch_auction.finalPriceMin(), self.FINAL_PRICE_MIN)
         # Start the presale from crowdsale controller
         self.crowdsale_controller.startPresale()
         # Finish the presale
@@ -67,16 +75,13 @@ class TestContract(AbstractTestContracts):
         decrease_per_day =  15097573839662448
         # Bidder 1 places a bid in the first block after auction starts
         self.s.mine()
-        self.s.head_state.block_number = 3
-        self.assertEqual(self.dutch_auction.calcTokenPrice(), int(self.PRICE_FACTOR))
+        self.s.head_state.block_number = 4
+        self.assertEqual(self.dutch_auction.calcTokenPrice(), int(self.START_PRICE))
         bidder_1 = 0
         value_1 = 20000 * 10**18  # 20k Ether
         self.dutch_auction.bid(sender=keys[bidder_1], value=value_1)
-        self.assertEqual(self.dutch_auction.calcStopPrice(), int(self.PRICE_FACTOR - decrease_per_day * 5))
         # A few blocks later
         self.s.head_state.block_number += self.BLOCKS_PER_DAY*2
-        # Stop price didn't change
-        self.assertEqual(self.dutch_auction.calcStopPrice(), int(self.PRICE_FACTOR - decrease_per_day * 5))
         # Spender places a bid in the name of bidder 2
         bidder_2 = 1
         spender = 9
@@ -89,7 +94,7 @@ class TestContract(AbstractTestContracts):
         # Bidder 3 places a bid
         bidder_3 = 2
         value_3 = 30000 * 10 ** 18  # 30k Ether
-        profiling = self.dutch_auction.bid(sender=keys[bidder_3], value=value_3, profiling=True)
+        self.dutch_auction.bid(sender=keys[bidder_3], value=value_3)
         refund_bidder_3 = (value_1 + value_2 + value_3) - self.FUNDING_GOAL
         # Bidder 3 gets refund; but paid gas so balance isn't exactly 0.75M Ether
         self.assertGreater(self.s.head_state.get_balance(accounts[bidder_3]), 0.98 * (value_3 + refund_bidder_3))

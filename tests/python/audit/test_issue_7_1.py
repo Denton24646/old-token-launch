@@ -13,7 +13,7 @@ class TestContract(AbstractTestContracts):
     MAX_TOKENS_SOLD = 23700000 # 30 million
     WAITING_PERIOD = 60*60*24*7
     FUNDING_GOAL = 62500 * 10**18 # 62,500 Ether ~ 25 million dollars
-    PRICE_FACTOR = 78125000000000000
+    START_PRICE = 78125000000000000
     MAX_GAS = 150000  # Kraken gas limit
 
     def __init__(self, *args, **kwargs):

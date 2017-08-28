@@ -12,7 +12,7 @@ class TestContract(AbstractTestContracts):
     MAX_TOKENS_SOLD = 23700000 # 30 million
     WAITING_PERIOD = 60*60*24*7
     FUNDING_GOAL = 62500 * 10**18 # 62,500 Ether ~ 25 million dollars
-    PRICE_FACTOR = 78125000000000000
+    START_PRICE = 78125000000000000
     MAX_GAS = 150000  # Kraken gas limit
 
     def __init__(self, *args, **kwargs):
@@ -54,7 +54,7 @@ class TestContract(AbstractTestContracts):
         # First price
         price_day_0 = self.dutch_auction.calcTokenPrice()
         # After 5 days and 5 hours (1 hour = 250 block)
-        # priceFactor ­ (15097573839662448 * (block.number ­ startBlock) / 6000);
+        # startPrice ­ (15097573839662448 * (block.number ­ startBlock) / 6000);
         # will underflow
         self.s.head_state.block_number += self.BLOCKS_PER_DAY*5 + 1250
         price_final_price = self.dutch_auction.calcTokenPrice()

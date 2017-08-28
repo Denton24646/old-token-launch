@@ -7,6 +7,9 @@ class TestContract(AbstractTestContracts):
 
     """
 
+    BLOCKS_PER_DAY = 6000
+    AUCTION_DURATION_IN_BLOCKS = 30000
+
     def __init__(self, *args, **kwargs):
         super(TestContract, self).__init__(*args, **kwargs)
 
@@ -24,7 +27,8 @@ class TestContract(AbstractTestContracts):
         self.s.mine()
         # Create dutch auction with ceiling of 2 billion and price factor of 200,000
         self.dutch_auction = self.create_contract('DutchAuction/DutchAuction.sol',
-                                                    params=(self.multisig_wallet.address, 62500 * 10 ** 18, 78125000000000000))
+                                                    params=(self.multisig_wallet.address, 62500 * 10 ** 18, 78125000000000000, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
+        self.s.mine()
         # Create crowdsale controller
         self.crowdsale_controller = self.create_contract('CrowdsaleController/CrowdsaleController.sol', 
                                                         params=(self.multisig_wallet.address, self.dutch_auction, 2500000000000000))

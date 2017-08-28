@@ -25,6 +25,7 @@ class TestContract(AbstractTestContracts):
         self.s.mine()
         self.omega_token= self.create_contract('Tokens/OmegaToken.sol',
                                                   params=(dutch_auction_address, self.multisig_wallet.address))
+        self.s.mine()
         self.open_window = self.create_contract('OpenWindow/OpenWindow.sol')
         # Transfer necessary funds to the open window sale
         self.omega_token.transfer(self.open_window.address, token_supply, sender=keys[2])
@@ -34,8 +35,8 @@ class TestContract(AbstractTestContracts):
         self.assertEqual(utils.remove_0x_head(self.open_window.crowdsaleController()), crowdsale_controller_address.hex())
         self.assertEqual(utils.remove_0x_head(self.open_window.wallet()), self.multisig_wallet.address.hex())
         self.assertEqual(self.open_window.tokenSupply(), token_supply)
-        self.assertEqual(self.open_window.price(), price)
         self.s.mine()
+        self.assertEqual(self.open_window.price(), price)
         # Buyer 1 can buy tokens (through crowdsale controller)
         # max eth is 14,200,000
         bidder_1 = 2
