@@ -86,7 +86,7 @@ contract DutchAuction {
     /// @param _wallet Omega wallet
     /// @param _ceiling Auction ceiling
     /// @param _priceFactor Auction price factor
-    function DutchAuction(address _wallet, uint256 _ceiling, uint256 _priceFactor, uint256 _blocksPerDay, uint256_durationInBlocks)
+    function DutchAuction(address _wallet, uint256 _ceiling, uint256 _priceFactor)
         public
     {
         // Check for null arguments
