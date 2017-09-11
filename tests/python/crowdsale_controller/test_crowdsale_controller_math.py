@@ -7,6 +7,10 @@ class TestContract(AbstractTestContracts):
 
     BLOCKS_PER_DAY = 6000
     AUCTION_DURATION_IN_BLOCKS = 30000
+    FINAL_PRICE_MIN = 2637130801687760
+    MIN_PRESALE_TOKENS = 2000000;
+    DUTCH_AUCTION_USD_VALUE_CAP = 25000000;
+    PRESALE_USD_VALUE_CAP = 5000000;
 
     def __init__(self, *args, **kwargs):
         super(TestContract, self).__init__(*args, **kwargs)
@@ -24,11 +28,11 @@ class TestContract(AbstractTestContracts):
         self.s.mine()
         # Create dutch auction with ceiling of 62.5k Ether and price factor of 78125000000000000
         self.dutch_auction = self.create_contract('DutchAuction/DutchAuction.sol',
-                                                  params=(self.multisig_wallet.address, 62500 * 10**18, 78125000000000000, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
+                                                  params=(self.multisig_wallet.address, 62500 * 10**18, 78125000000000000, self.FINAL_PRICE_MIN, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
         self.s.mine()
         # Create crowdsale controller to get Omega token
         self.crowdsale_controller = self.create_contract('CrowdsaleController/CrowdsaleController.sol', 
-                                                        params=(self.multisig_wallet.address, self.dutch_auction, 2500000000000000))
+                                                        params=(self.multisig_wallet.address, self.dutch_auction, self.MIN_PRESALE_TOKENS, self.DUTCH_AUCTION_USD_VALUE_CAP, self.PRESALE_USD_VALUE_CAP))
         self.s.mine()
         # Get the omega token contract that the crowdsale controller deployed
         omega_token_address = self.crowdsale_controller.omegaToken()
@@ -51,30 +55,22 @@ class TestContract(AbstractTestContracts):
         # Sets up dutch auction total received for presale math
         bidder_1 = 4
         total_received = 62500 * 10 ** 18 #  62.5k Ether
-        # self.dutch_auction.bid(sender=keys[bidder_1], value=total_received)
-        # # Check that the presale token supply is calculated correctly
-        # self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 2000000 * 10**18)
-        # self.s.revert(snapshot)
-        # self.s.head_state.block_number += self.BLOCKS_PER_DAY *3
-        # total_received = 62500 * 10**18
-        # self.dutch_auction.bid(sender=keys[bidder_1], value=total_received)
-        # self.dutch_auction.updateStage()
-        # # Check that the presale token supply is calculated correctly
-        # self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 2000000*10**18)
-        # self.s.revert(snapshot)
+        self.dutch_auction.bid(sender=keys[bidder_1], value=total_received)
+        # Check that the presale token supply is calculated correctly
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 2000000 * 10**18)
+        self.s.revert(snapshot)
+        self.s.head_state.block_number += self.BLOCKS_PER_DAY *3
+        total_received = 62500 * 10**18
+        self.dutch_auction.bid(sender=keys[bidder_1], value=total_received)
+        self.dutch_auction.updateStage()
+        # Check that the presale token supply is calculated correctly
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 2000000*10**18)
+        self.s.revert(snapshot)
         self.s.head_state.block_number += self.BLOCKS_PER_DAY * 5 - 1500
         self.dutch_auction.bid(sender=keys[bidder_1], value=62500 * 10**18)
         self.dutch_auction.updateStage()
         # Check that the presale token supply is calculated correctly
         self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 2599485861182520710363923)
-        self.s.revert(snapshot)
-        self.s.head_state.block_number += self.BLOCKS_PER_DAY *1
-        total_received = 20000 * 10**18
-        self.dutch_auction.bid(sender=keys[bidder_1], value=total_received)
-        self.s.head_state.block_number += self.BLOCKS_PER_DAY *4
-        self.dutch_auction.updateStage()
-        # Check that the presale token supply is calculated correctly
-        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 2022400000000002847539200)
         self.s.revert(snapshot)
         self.s.head_state.block_number += self.BLOCKS_PER_DAY *5-1000
         total_received = 62500 * 10**18
@@ -83,20 +79,32 @@ class TestContract(AbstractTestContracts):
         # Check that the presale token supply is calculated correctly
         self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 3234115138592752785592995)
         self.s.revert(snapshot)
+        self.s.head_state.block_number += self.BLOCKS_PER_DAY * 5 - 500
+        self.dutch_auction.bid(sender=keys[bidder_1], value=62500 * 10**18)
+        self.dutch_auction.updateStage()
+        # Check that the presale token supply is calculated correctly
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 4278702397743304433741783)
+        self.s.revert(snapshot)
+        self.s.head_state.block_number += self.BLOCKS_PER_DAY * 5 -10
+        self.dutch_auction.bid(sender=keys[bidder_1], value=62500 * 10**18)
+        self.dutch_auction.updateStage()
+        # Check that the presale token supply is calculated correctly
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6260266622642294731968069)
+        self.s.revert(snapshot)
         self.s.head_state.block_number += self.BLOCKS_PER_DAY *3
         total_received = 32500 * 10**18
         self.dutch_auction.bid(sender=keys[bidder_1], value=total_received)
         self.s.head_state.block_number += self.BLOCKS_PER_DAY *2
         self.dutch_auction.updateStage()
         # Check that the presale token supply is calculated correctly
-        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 3286400000000004629245124)
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6300000000000000000000000)
         self.s.revert(snapshot)
         self.s.head_state.block_number += self.BLOCKS_PER_DAY * 5 -10
         self.dutch_auction.bid(sender=keys[bidder_1], value=30500 * 10**18)
         self.s.head_state.block_number += 10
         self.dutch_auction.updateStage()
         # Check that the presale token supply is calculated correctly
-        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 3084160000000004342777963)
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6300000000000000000000000)
         self.s.revert(snapshot)
         self.s.head_state.block_number += self.BLOCKS_PER_DAY *3
         total_received = 32500 * 10**18
@@ -104,7 +112,7 @@ class TestContract(AbstractTestContracts):
         self.s.head_state.block_number += self.BLOCKS_PER_DAY *2
         self.dutch_auction.updateStage()
         # Check that the presale token supply is calculated correctly
-        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 3286400000000004629245124)
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6300000000000000000000000)
         self.s.revert(snapshot)
         self.s.head_state.block_number += self.BLOCKS_PER_DAY *2
         total_received = 40500 * 10**18
@@ -112,13 +120,15 @@ class TestContract(AbstractTestContracts):
         self.s.head_state.block_number += self.BLOCKS_PER_DAY *3
         self.dutch_auction.updateStage()
         # Check that the presale token supply is calculated correctly
-        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 4095360000000005767136537)
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6300000000000000000000000)
         self.s.revert(snapshot)
-        self.s.head_state.block_number += self.BLOCKS_PER_DAY * 5 - 500
-        self.dutch_auction.bid(sender=keys[bidder_1], value=62500 * 10**18)
+        self.s.head_state.block_number += self.BLOCKS_PER_DAY *1
+        total_received = 20000 * 10**18
+        self.dutch_auction.bid(sender=keys[bidder_1], value=total_received)
+        self.s.head_state.block_number += self.BLOCKS_PER_DAY *4
         self.dutch_auction.updateStage()
         # Check that the presale token supply is calculated correctly
-        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 4278702397743304433741783)
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6300000000000000000000000)
         self.s.revert(snapshot)
         self.s.head_state.block_number += self.BLOCKS_PER_DAY *1
         total_received = 55000 * 10**18
@@ -126,10 +136,16 @@ class TestContract(AbstractTestContracts):
         self.s.head_state.block_number += self.BLOCKS_PER_DAY *4
         self.dutch_auction.updateStage()
         # Check that the presale token supply is calculated correctly
-        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 5561600000000007834669522)
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6300000000000000000000000)
         self.s.revert(snapshot)
-        self.s.head_state.block_number += self.BLOCKS_PER_DAY * 5 -10
-        self.dutch_auction.bid(sender=keys[bidder_1], value=62500 * 10**18)
+        self.s.head_state.block_number += self.BLOCKS_PER_DAY * 10
         self.dutch_auction.updateStage()
-        # Check that the presale token supply is calculated correctly
-        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6260266622642294731968069)
+        # Check that the presale token supply is calculated correctly when no tokens are sold in dutch auction
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6300000000000000000000000)
+        self.s.revert(snapshot)
+        one_token = self.dutch_auction.calcTokenPrice()
+        self.dutch_auction.bid(sender=keys[bidder_1], value=one_token)
+        self.s.head_state.block_number += self.BLOCKS_PER_DAY * 10
+        self.dutch_auction.updateStage()
+        # Check that the presale token supply is calculated correctly when 1 token is sold
+        self.assertEqual(int(self.crowdsale_controller.calcPresaleTokenSupply()), 6300000000000000000000000)

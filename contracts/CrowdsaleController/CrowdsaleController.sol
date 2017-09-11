@@ -97,7 +97,8 @@ contract CrowdsaleController {
     {
         // Initialize gateway to both contracts
         // Check for null arguments
-        require(_wallet != 0x0 && address(_dutchAuction) != 0x0);
+        require(_wallet != 0x0 && address(_dutchAuction) != 0x0 && _minPresaleTokens > 0);
+        require(_dutchAuctionUsdValueCap > 0 && _presaleUsdValueCap > 0);
         owner = msg.sender;
         wallet = _wallet;
         dutchAuction = _dutchAuction;
@@ -210,7 +211,7 @@ contract CrowdsaleController {
 
     /// @dev Calculates the token supply for the presale contract
     function calcPresaleTokenSupply()
-        public 
+        public
         constant
         returns (uint256)
     {   
@@ -219,9 +220,11 @@ contract CrowdsaleController {
         // uint256 reverseDutchValuationWithPresaleDiscount = (reverseDutchValuation * 3) / 4;
         // uint256 presaleCap = 5000000; // 5 million USD
         uint256 dutchAuctionTokenSupply = omegaToken.balanceOf(address(dutchAuction));
-        if (dutchAuctionTokenSupply == 0)
-            return minPresaleTokens*10**omegaToken.DECIMALS();
-        return max256(minPresaleTokens*10**omegaToken.DECIMALS(), presaleUsdValueCap*10**36/(dutchAuctionUsdValueCap*10**36/dutchAuctionTokenSupply).mul(3).div(4));
+        uint256 potentialPresaleTokens = presaleUsdValueCap*10**36/(dutchAuctionUsdValueCap*10**36/dutchAuctionTokenSupply).mul(3).div(4);
+        // Presale participants cannot receive more then the maximum number of tokens
+        if (potentialPresaleTokens > 6300000*10**18)
+            return 6300000*10**omegaToken.DECIMALS();
+        return max256(minPresaleTokens*10**omegaToken.DECIMALS(), potentialPresaleTokens);
     }
 
     /*
