@@ -7,7 +7,6 @@ contract Presale {
     /*
      *  Public functions
      */
-    function Presale() public;
     function setupClaim(uint256 _totalSupply, Token _omegaToken) external;
     function usdContribution(address buyer, uint256 presalePercent) external;
     function claimTokens(address receiver) external;

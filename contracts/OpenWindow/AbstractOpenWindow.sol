@@ -7,7 +7,6 @@ contract OpenWindow {
     /*
      * Public functions
      */
-    function OpenWindow(uint256 _tokenSupply, uint256 _price, address _wallet, Token _omegaToken) public;
     function buy(address receiver) public payable;
     function claimTokens(address receiver) public;
 }
