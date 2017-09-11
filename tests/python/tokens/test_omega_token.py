@@ -21,5 +21,3 @@ class TestContract(AbstractTestContracts):
         self.assertEqual(self.omega_token.balanceOf(dutch_auction_address), 23700000 * 10 ** 18)
         self.assertEqual(self.omega_token.balanceOf(crowdsale_controller_address), 6300000 * 10 ** 18)
         self.assertEqual(self.omega_token.balanceOf(multisig_wallet_address), 70000000 * 10 ** 18)
-        
-

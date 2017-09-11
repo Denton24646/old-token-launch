@@ -58,6 +58,10 @@ class TestContract(AbstractTestContracts):
         self.omega_token.transfer(self.presale.address, token_supply, sender=keys[2])
         # Setup the presale
         self.presale.setupClaim(token_supply, self.omega_token.address)
+        snapshot = self.s.snapshot()
+        # Presale setup cannot be done twice
+        self.assertRaises(TransactionFailed, self.presale.setupClaim, token_supply, self.omega_token.address)
+        self.s.revert(snapshot)
         self.assertEqual(utils.remove_0x_head(self.presale.omegaToken()), self.omega_token.address.hex());
         self.assertEqual(self.presale.totalSupply(), token_supply)
         # Buyers can claim there tokens (permissions will be in the crowdsale controller)
