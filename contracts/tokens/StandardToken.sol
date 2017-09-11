@@ -17,47 +17,52 @@ contract StandardToken is Token {
      */
     /// @dev Transfers sender's tokens to a given address. Returns success
     /// @param to Address of token receiver
-    /// @param value Number of tokens to transfer
+    /// @param _value Number of tokens to transfer
     /// @return Returns success of function call
-    function transfer(address to, uint value)
+    function transfer(address to, uint _value)
         public
         returns (bool)
     {
-        balances[msg.sender] = balances[msg.sender].sub(value);
-        balances[to] = balances[to].add(value);
-        Transfer(msg.sender, to, value);
+        balances[msg.sender] = balances[msg.sender].sub(_value);
+        balances[to] = balances[to].add(_value);
+        Transfer(msg.sender, to, _value);
         return true;
     }
 
     /// @dev Allows allowed third party to transfer tokens from one address to another. Returns success
     /// @param from Address from where tokens are withdrawn
     /// @param to Address to where tokens are sent
-    /// @param value Number of tokens to transfer
+    /// @param _value Number of tokens to transfer
     /// @return Returns success of function call
-    function transferFrom(address from, address to, uint value)
+    function transferFrom(address from, address to, uint _value)
         public
         returns (bool)
     {
-        // if (balances[from] < value || allowances[from][msg.sender] < value)
+        // if (balances[from] < _value || allowances[from][msg.sender] < _value)
         //     // Balance or allowance too low
         //     revert();
-        balances[to] = balances[to].add(value);
-        balances[from] = balances[from].sub(value);
-        allowances[from][msg.sender] = allowances[from][msg.sender].sub(value);
-        Transfer(from, to, value);
+        balances[to] = balances[to].add(_value);
+        balances[from] = balances[from].sub(_value);
+        allowances[from][msg.sender] = allowances[from][msg.sender].sub(_value);
+        Transfer(from, to, _value);
         return true;
     }
 
     /// @dev Sets approved amount of tokens for spender. Returns success
     /// @param _spender Address of allowed account
-    /// @param value Number of approved tokens
+    /// @param _value Number of approved tokens
     /// @return Returns success of function call
-    function approve(address _spender, uint value)
+    function approve(address _spender, uint _value)
         public
         returns (bool)
     {
-        allowances[msg.sender][_spender] = value;
-        Approval(msg.sender, _spender, value);
+        // To change the approve amount you first have to reduce the addresses`
+        //  allowance to zero by calling `approve(_spender, 0)` if it is not
+        //  already 0 to mitigate the race condition described here:
+        //  https://github.com/ethereum/EIPs/issues/20#issuecomment-263524729
+        require((_value == 0) || (allowances[msg.sender][_spender] == 0));
+        allowances[msg.sender][_spender] = _value;
+        Approval(msg.sender, _spender, _value);
         return true;
     }
 
