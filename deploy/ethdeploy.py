@@ -9,6 +9,7 @@ import json
 import rlp
 import logging
 import os
+from tokenSale import token_sale_json
 
 
 # create logger
@@ -172,9 +173,8 @@ class EthDeploy:
         self.log_transaction_receipt(transaction_receipt)
 
     def process(self, f):
-        # read instructions file
-        with open(f, 'r') as instructions_file:
-            instructions = json.load(instructions_file)
+        # read instructions json
+        instructions = token_sale_json
         for i in instructions:
             if i['type'] == 'abi':
                 for address in i['addresses']:
