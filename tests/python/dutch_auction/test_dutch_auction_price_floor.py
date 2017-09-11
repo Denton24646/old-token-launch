@@ -66,5 +66,10 @@ class TestContract(AbstractTestContracts):
         self.s.head_state.timestamp += self.WAITING_PERIOD + 1
         self.crowdsale_controller.updateStage()
         assert self.crowdsale_controller.stage() == 5
+        before_allowance = self.omega_token.allowance(self.dutch_auction.address, self.crowdsale_controller.address)
+        assert before_allowance == 23700000*10**18
+        self.crowdsale_controller.forwardTokensToWallet()
+        after_allowance = self.omega_token.allowance(self.dutch_auction.address, self.crowdsale_controller.address)
+        assert after_allowance == 0
         assert self.omega_token.balanceOf(self.multisig_wallet.address) == 93700000*10**18
         assert self.omega_token.balanceOf(self.dutch_auction.address) == 0 

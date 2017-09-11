@@ -206,8 +206,6 @@ contract CrowdsaleController {
         isDutchAuction
     {
         presaleTokenSupply = calcPresaleTokenSupply();
-        // Transfers tokens from the dutch auction to the wallet after presale calc is done
-        omegaToken.transferFrom(address(dutchAuction), wallet, omegaToken.allowance(address(dutchAuction), address(this)));
         finalizeSale();
     }
 
@@ -239,9 +237,17 @@ contract CrowdsaleController {
         return stage;
     }
 
+    /// @dev Forwards unsold dutch auction tokens into wallet
+    function forwardTokensToWallet() 
+        public
+        atStage(Stages.TradingStarted)
+    {
+        omegaToken.transferFrom(address(dutchAuction), wallet, omegaToken.allowance(address(dutchAuction), address(this)));
+    }
+
     /*
      *  Private functions
-     */
+    */
     /// @dev Finishes the token sale
     function finalizeSale() 
         private

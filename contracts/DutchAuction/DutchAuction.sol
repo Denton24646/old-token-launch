@@ -262,7 +262,6 @@ contract DutchAuction {
             crowdsaleController.startOpenWindow(tokensLeft, finalPrice);
         } else {
             // Give unsold tokens to wallet after token sale has ended
-            // bids[wallet] = tokensLeft.mul(finalPrice).div(10**omegaToken.DECIMALS());
             omegaToken.approve(address(crowdsaleController), tokensLeft);
             crowdsaleController.finishFromDutchAuction();
         }
