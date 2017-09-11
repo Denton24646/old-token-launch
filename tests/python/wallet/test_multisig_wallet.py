@@ -31,7 +31,6 @@ class TestContract(AbstractTestContracts):
         self.assertTrue(self.multisig_wallet.isOwner(accounts[wa_3]))
         self.assertEqual(utils.remove_0x_head(self.multisig_wallet.owners(2)), accounts[wa_3].hex())
         self.assertEqual(self.multisig_wallet.required(), required_accounts)
-        # import pdb; pdb.set_trace()
         self.assertEqual(self.multisig_wallet.getOwners(), ['0x'+accounts[wa_1].hex(), '0x'+accounts[wa_2].hex(), '0x'+accounts[wa_3].hex()])
         # Create ABIs
         multisig_abi = self.multisig_wallet.translator
@@ -46,7 +45,6 @@ class TestContract(AbstractTestContracts):
         self.assertRaises(TransactionFailed, self.multisig_wallet.submitTransaction, self.multisig_wallet.address, 0,
                           add_owner_data, sender=keys[0])
         # Wallet owner tries to submit transaction with destination address 0 but fails. 0 address is not allowed.
-        # import pdb; pdb.set_trace()
         # self.assertRaises(
         #     TransactionFailed, self.multisig_wallet.submitTransaction, 0, 0, add_owner_data, sender=keys[wa_1])
         self.s.mine()

@@ -30,7 +30,6 @@ class TestContract(AbstractTestContracts):
         # Create dutch auction with ceiling of 2 billion and price factor of 200,000
         self.dutch_auction = self.create_contract('DutchAuction/DutchAuction.sol',
                                                   params=(self.multisig_wallet.address, 2000 * 10 ** 18, 200000))
-        # import pdb; pdb.set_trace()
         # Create crowdsale controller
         self.crowdsale_controller = self.create_contract('CrowdsaleController/CrowdsaleController.sol', 
                                                         params=(self.multisig_wallet.address, self.dutch_auction, 2500000000000000))
@@ -71,7 +70,7 @@ class TestContract(AbstractTestContracts):
         self.s.head_state.block_number = 3
         self.assertEqual(self.dutch_auction.calcTokenPrice(), int(self.PRICE_FACTOR))
         bidder_1 = 0
-        value_1 = 20000 * 10**18  # 30k Ether
+        value_1 = 20000 * 10**18  # 20k Ether
         self.dutch_auction.bid(sender=keys[bidder_1], value=value_1)
         self.assertEqual(self.dutch_auction.calcStopPrice(), int(self.PRICE_FACTOR - decrease_per_day * 5))
         # A few blocks later

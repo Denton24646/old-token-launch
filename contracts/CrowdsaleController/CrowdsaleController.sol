@@ -217,12 +217,11 @@ contract CrowdsaleController {
         constant
         returns (uint256)
     {   
-        // uint256 reverseDutchValuation = (100000000 * 10 ** 18/omegaToken.balanceOf(dutchAuction) * 625000*10**18);
-        // uint256 reverseDutchValuationWithPremium =(reverseDutchValuation * 3) / 4;
-        // uint256 valueCap = exchangeRateInWei * 250000000; // 250 million USD in wei
-        // uint256 presaleCap = exchangeRateInWei * 5000000; // 5 million USD in wei
-        // return omegaToken.totalSupply() * presaleCap/min256(valueCap, reverseDutchValuationWithPremium);
-        return omegaToken.totalSupply().mul(exchangeRateInWei).mul(5000000)/min256(exchangeRateInWei.mul(MAIN_SALE_VALUE_CAP),((100000000 * 10 ** 18/omegaToken.balanceOf(dutchAuction) * 625000*10**18 * 3).div(4)));
+        // uint256 minimumAmountOfPresaleTokens = 2000000*10**18;
+        // uint256 reverseDutchValuation = 25000000*10**36/omegaToken.balanceOf(dutchAuction)
+        // uint256 reverseDutchValuationWithPresaleDiscount = (reverseDutchValuation * 3) / 4;
+        // uint256 presaleCap = 5000000; // 5 million USD
+      return max256(2000000*10**18, 5000000*10**36/(25000000*10**36/omegaToken.balanceOf(dutchAuction)).mul(3).div(4));
     }
 
     /*
@@ -238,15 +237,15 @@ contract CrowdsaleController {
         FinalizeSale(endTime);
     }
 
-    /// @dev Calculates the minimum between two numbers
+    /// @dev Calculates the maximum between two numbers
     /// @param a The first number
     /// @param b The second number
-    function min256(uint256 a, uint256 b) 
+    function max256(uint256 a, uint256 b) 
         private 
         constant 
         returns (uint256) 
     {
-        return a < b ? a : b;
+        return a > b ? a : b;
     }
 
     function setupPresaleClaim()

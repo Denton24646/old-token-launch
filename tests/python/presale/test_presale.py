@@ -30,7 +30,6 @@ class TestContract(AbstractTestContracts):
 
         self.assertEqual(self.presale.MAX_PERCENT_OF_PRESALE(), 100 * 10 **18);
         self.assertEqual(self.presale.percentOfPresaleSold(), 0);
-        # import pdb; pdb.set_trace()
         self.assertEqual(utils.remove_0x_head(self.presale.crowdsaleController()), crowdsale_controller_address.hex())
         
         # Buyer can buy presale tokens as soon as it's initialized
