@@ -8,6 +8,10 @@ class TestContract(AbstractTestContracts):
     # constants from tests/python/ducht_auction/test_dutch_auction.py
     BLOCKS_PER_DAY = 6000
     AUCTION_DURATION_IN_BLOCKS = 30000
+    FINAL_PRICE_MIN = 2637130801687760
+    MIN_PRESALE_TOKENS = 2000000;
+    DUTCH_AUCTION_USD_VALUE_CAP = 25000000;
+    PRESALE_USD_VALUE_CAP = 5000000;
     TOTAL_TOKENS = 100000000 * 10**18 # 100 million
     MAX_TOKENS_SOLD = 23700000 # 30 million
     WAITING_PERIOD = 60*60*24*7
@@ -31,11 +35,11 @@ class TestContract(AbstractTestContracts):
         self.s.mine()
         # Create dutch auction with ceiling of 62.5k Ether and price factor of 78125000000000000
         self.dutch_auction = self.create_contract('DutchAuction/DutchAuction.sol',
-                                                  params=(self.multisig_wallet.address, 62500 * 10** 18, 78125000000000000, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
+                                                  params=(self.multisig_wallet.address, self.FUNDING_GOAL, self.START_PRICE, self.FINAL_PRICE_MIN, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
         self.s.mine()
         # Create crowdsale controller
         self.crowdsale_controller = self.create_contract('CrowdsaleController/CrowdsaleController.sol',
-                                                    params=(self.multisig_wallet.address, self.dutch_auction, 2500000000000000))
+                                                    params=(self.multisig_wallet.address, self.dutch_auction, self.MIN_PRESALE_TOKENS, self.DUTCH_AUCTION_USD_VALUE_CAP, self.PRESALE_USD_VALUE_CAP))
         self.s.mine()
         # Get the omega token contract that the crowdsale controller deployed
         omega_token_address = self.crowdsale_controller.omegaToken()

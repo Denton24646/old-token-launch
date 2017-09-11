@@ -9,6 +9,10 @@ class TestContract(AbstractTestContracts):
 
     BLOCKS_PER_DAY = 6000
     AUCTION_DURATION_IN_BLOCKS = 30000
+    FINAL_PRICE_MIN = 2637130801687760
+    MIN_PRESALE_TOKENS = 2000000;
+    DUTCH_AUCTION_USD_VALUE_CAP = 25000000;
+    PRESALE_USD_VALUE_CAP = 5000000;
 
     def __init__(self, *args, **kwargs):
         super(TestContract, self).__init__(*args, **kwargs)
@@ -27,11 +31,11 @@ class TestContract(AbstractTestContracts):
         self.s.mine()
         # Create dutch auction with ceiling of 2 billion and price factor of 200,000
         self.dutch_auction = self.create_contract('DutchAuction/DutchAuction.sol',
-                                                    params=(self.multisig_wallet.address, 62500 * 10 ** 18, 78125000000000000, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
+                                                    params=(self.multisig_wallet.address, 62500 * 10 ** 18, 78125000000000000, self.FINAL_PRICE_MIN, self.BLOCKS_PER_DAY, self.AUCTION_DURATION_IN_BLOCKS))
         self.s.mine()
         # Create crowdsale controller
         self.crowdsale_controller = self.create_contract('CrowdsaleController/CrowdsaleController.sol', 
-                                                        params=(self.multisig_wallet.address, self.dutch_auction, 2500000000000000))
+                                                        params=(self.multisig_wallet.address, self.dutch_auction, self.MIN_PRESALE_TOKENS, self.DUTCH_AUCTION_USD_VALUE_CAP, self.PRESALE_USD_VALUE_CAP))
         self.s.mine()
         # Get the omega token contract that the crowdsale controller deployed
         presale_address = self.crowdsale_controller.presale()
