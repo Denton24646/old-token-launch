@@ -14,10 +14,6 @@ contract DutchAuction {
     event BidSubmission(address indexed sender, uint256 amount);
 
     /*
-     *  Constants
-     */
-
-    /*
      *  Storage
      */
     OmegaToken public omegaToken;
@@ -103,7 +99,8 @@ contract DutchAuction {
         public
     {
         // Check for null arguments
-        require(_wallet != 0x0 && _ceiling != 0 && _startPrice != 0 && _blocksPerDay != 0 && _auctionDurationInBlocks != 0 && _finalPriceMin != 0);
+        require(_wallet != 0x0 && _ceiling != 0 && _startPrice != 0 && _finalPriceMin != 0);
+        require(_startPrice.sub(_finalPriceMin).div(_auctionDurationInBlocks.div(_blocksPerDay)) > 0);
         owner = msg.sender;
         wallet = _wallet;
         ceiling = _ceiling;
@@ -112,8 +109,6 @@ contract DutchAuction {
         auctionDurationInBlocks = _auctionDurationInBlocks;
         finalPriceMin = _finalPriceMin;
         stage = Stages.AuctionDeployed;
-        // require(_startPrice.sub(_finalPriceMin).div(auctionDurationInBlocks.div(blocksPerDay)) > 0);
-        require(omegaToken.DUTCH_AUCTION_ALLOCATION() >= totalReceived * 10**omegaToken.DECIMALS().div(_finalPriceMin));
     }
 
     /// @dev Setup function sets external contracts' addresses
@@ -139,7 +134,9 @@ contract DutchAuction {
         isWallet
         atStage(Stages.AuctionSetUp)
     {   
-        // Makes sure that the presale has already occurred
+        // Make sure that the conditions are valid
+        require(omegaToken.DUTCH_AUCTION_ALLOCATION() >= totalReceived * 10**omegaToken.DECIMALS().div(finalPriceMin));
+        // Make sure that the presale has already occurred
         require(crowdsaleController.stage() == CrowdsaleController.Stages.MainSale);
         stage = Stages.AuctionStarted;
         startBlock = block.number;
@@ -242,9 +239,9 @@ contract DutchAuction {
         // uint256 rateOfDecreasePerDay = (startPrice - finalPriceMin) / (auctionDurationInBlocks / blocksPerDay))
         // uint256 rateOfDecrease = rateOfDecreasePerDay * block_diff / blocksPerDay;
         // return startPrice - rate_of_decrease;
-        uint256 numberOfBlocks = block.number.sub(startBlock); 
+        uint256 numberOfBlocks = block.number.sub(startBlock);
         if (numberOfBlocks > auctionDurationInBlocks)
-            numberOfBlocks = auctionDurationInBlocks - 1;
+            numberOfBlocks = auctionDurationInBlocks;
         return startPrice.sub(startPrice.sub(finalPriceMin).div(auctionDurationInBlocks.div(blocksPerDay)).mul(numberOfBlocks).div(blocksPerDay));
     }
 
@@ -259,10 +256,13 @@ contract DutchAuction {
         finalPrice = calcTokenPrice();
         uint256 tokensLeft = omegaToken.DUTCH_AUCTION_ALLOCATION().sub((totalReceived * 10**omegaToken.DECIMALS()).div(finalPrice));
         // Auction contract transfers all unsold tokens to the crowdsale controller
-        omegaToken.transfer(address(crowdsaleController), tokensLeft);
-        if (totalReceived == ceiling)
+        if (totalReceived == ceiling) {
+            omegaToken.transfer(address(crowdsaleController), tokensLeft);
             crowdsaleController.startOpenWindow(tokensLeft, finalPrice);
-        else
+        } else {
+            // Give unsold tokens to wallet after token sale has ended
+            bids[wallet] = tokensLeft.mul(finalPrice).div(10**omegaToken.DECIMALS());
             crowdsaleController.finishFromDutchAuction();
+        }
     }
 }
