@@ -74,7 +74,6 @@ class TestContract(AbstractTestContracts):
         value_2 = 10 * 10**18 # 10K Ether
         self.dutch_auction.bid(sender=keys[bidder_2], value=value_2)
         self.s.head_state.block_number += self.BLOCKS_PER_DAY
-        # self.s.chain.state.block_number = self.s.head_state.block_number
         # Check the token price
         day_3_token_price = self.dutch_auction.calcTokenPrice() 
         self.assertEqual(day_3_token_price, 78125000000000000 - decrease_per_day * 3)

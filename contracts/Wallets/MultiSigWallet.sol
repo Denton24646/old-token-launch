@@ -360,6 +360,7 @@ contract MultiSigWallet {
         returns (uint[] _transactionIds)
     {
         require(pending || executed);
+        require(from < to && to <= transactionCount);
         uint[] memory transactionIdsTemp = new uint[](transactionCount);
         uint count = 0;
         uint i;

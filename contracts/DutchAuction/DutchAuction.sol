@@ -100,6 +100,7 @@ contract DutchAuction {
     {
         // Check for null arguments
         require(_wallet != 0x0 && _ceiling != 0 && _startPrice != 0 && _finalPriceMin != 0);
+        require(_blocksPerDay > 0 && _auctionDurationInBlocks > 0);
         require(_startPrice.sub(_finalPriceMin).div(_auctionDurationInBlocks.div(_blocksPerDay)) > 0);
         owner = msg.sender;
         wallet = _wallet;
@@ -261,7 +262,8 @@ contract DutchAuction {
             crowdsaleController.startOpenWindow(tokensLeft, finalPrice);
         } else {
             // Give unsold tokens to wallet after token sale has ended
-            bids[wallet] = tokensLeft.mul(finalPrice).div(10**omegaToken.DECIMALS());
+            // bids[wallet] = tokensLeft.mul(finalPrice).div(10**omegaToken.DECIMALS());
+            omegaToken.approve(address(crowdsaleController), tokensLeft);
             crowdsaleController.finishFromDutchAuction();
         }
     }

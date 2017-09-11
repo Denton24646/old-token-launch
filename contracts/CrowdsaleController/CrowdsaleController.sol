@@ -206,6 +206,8 @@ contract CrowdsaleController {
         isDutchAuction
     {
         presaleTokenSupply = calcPresaleTokenSupply();
+        // Transfers tokens from the dutch auction to the wallet after presale calc is done
+        omegaToken.transferFrom(address(dutchAuction), wallet, omegaToken.allowance(address(dutchAuction), address(this)));
         finalizeSale();
     }
 
@@ -225,6 +227,16 @@ contract CrowdsaleController {
         if (potentialPresaleTokens > 6300000*10**18)
             return 6300000*10**omegaToken.DECIMALS();
         return max256(minPresaleTokens*10**omegaToken.DECIMALS(), potentialPresaleTokens);
+    }
+
+    /// @dev Returns correct stage, even if a function with timedTransitions modifier has not yet been called yet
+    /// @return Returns current auction stage
+    function updateStage()
+        public
+        timedTransitions
+        returns (Stages)
+    {
+        return stage;
     }
 
     /*
