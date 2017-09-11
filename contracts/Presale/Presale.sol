@@ -64,7 +64,7 @@ contract Presale {
         external
         isCrowdsaleController
     {
-        require(_omegaToken.balanceOf(this) >= _totalSupply);
+        require(_omegaToken.balanceOf(this) >= _totalSupply && totalSupply == 0 && address(omegaToken) == 0x0);
         totalSupply = _totalSupply;
         omegaToken = _omegaToken;
     }
